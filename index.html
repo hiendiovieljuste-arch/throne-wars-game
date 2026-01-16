@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Throne Wars - Action Médiévale</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Styles critiques pour le jeu d'action */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: #1a1a2e;
+            cursor: crosshair;
+        }
+        
+        #uiOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .mobile-controls {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: auto;
+        }
+        
+        .joystick-container {
+            width: 150px;
+            height: 150px;
+            position: relative;
+        }
+        
+        .joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            border: 2px solid #d4af37;
+        }
+        
+        .joystick-thumb {
+            width: 60px;
+            height: 60px;
+            background: #d4af37;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.7);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .action-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(139, 0, 0, 0.8);
+            border: 3px solid #8b0000;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
+        }
+        
+        .action-btn:active {
+            transform: scale(0.9);
+        }
+        
+        #attackBtn {
+            background: rgba(139, 0, 0, 0.9);
+            border-color: #ff0000;
+        }
+        
+        #blockBtn {
+            background: rgba(42, 77, 105, 0.9);
+            border-color: #2a4d69;
+        }
+        
+        #dodgeBtn {
+            background: rgba(212, 175, 55, 0.9);
+            border-color: #d4af37;
+        }
+        
+        #reloadBtn {
+            background: rgba(45, 90, 39, 0.9);
+            border-color: #2d5a27;
+            font-size: 20px;
+        }
+        
+        .health-bar {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 3px solid #8b0000;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ff4500);
+            width: 100%;
+            transition: width 0.3s;
+        }
+        
+        .health-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px black;
+        }
+        
+        .stamina-bar {
+            position: fixed;
+            top: 70px;
+            left: 20px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #2a4d69;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .stamina-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1e90ff, #00bfff);
+            width: 100%;
+            transition: width 0.2s;
+        }
+        
+        .ammo-display {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 3px solid #d4af37;
+            border-radius: 15px;
+            padding: 15px 25px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 150px;
+        }
+        
+        .weapon-icon {
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+        
+        .damage-popup {
+            position: fixed;
+            color: #ff0000;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 0 10px black;
+            pointer-events: none;
+            z-index: 200;
+            animation: floatUp 1s ease-out forwards;
+        }
+        
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+        }
+        
+        .blood-splatter {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0;
+        }
+        
+        .blood-effect {
+            position: absolute;
+            background: radial-gradient(circle, rgba(139, 0, 0, 0.7) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(5px);
+        }
+        
+        .screen-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        #menuScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.95)), url('https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: #d4af37;
+            font-family: 'Cinzel', serif;
+        }
+        
+        .menu-title {
+            font-size: 5rem;
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.8);
+            margin-bottom: 30px;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+        
+        .menu-button {
+            padding: 20px 40px;
+            margin: 15px;
+            font-size: 1.5rem;
+            background: linear-gradient(to bottom, rgba(212, 175, 55, 0.2), rgba(180, 150, 40, 0.1));
+            border: 3px solid #d4af37;
+            color: #d4af37;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            min-width: 250px;
+            text-align: center;
+        }
+        
+        .menu-button:hover {
+            background: linear-gradient(to bottom, rgba(212, 175, 55, 0.4), rgba(180, 150, 40, 0.3));
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+        
+        .character-select {
+            display: flex;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .character-option {
+            width: 150px;
+            height: 200px;
+            border: 3px solid transparent;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .character-option:hover {
+            transform: scale(1.1);
+            border-color: #d4af37;
+        }
+        
+        .character-option.selected {
+            border-color: #d4af37;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.7);
+            background: rgba(212, 175, 55, 0.1);
+        }
+        
+        .character-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+        
+        .character-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .character-stats {
+            font-size: 0.9rem;
+            color: #c0c0c0;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .menu-title {
+                font-size: 3rem;
+            }
+            
+            .menu-button {
+                padding: 15px 30px;
+                font-size: 1.2rem;
+                min-width: 200px;
+            }
+            
+            .character-select {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .health-bar {
+                width: 200px;
+                height: 30px;
+                top: 10px;
+                left: 10px;
+            }
+            
+            .stamina-bar {
+                width: 150px;
+                height: 15px;
+                top: 45px;
+                left: 10px;
+            }
+            
+            .ammo-display {
+                top: 10px;
+                right: 10px;
+                padding: 10px 15px;
+                font-size: 18px;
+                min-width: 120px;
+            }
+            
+            .joystick-container {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .action-btn {
+                width: 70px;
+                height: 70px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Écran de menu -->
+    <div id="menuScreen">
+        <h1 class="menu-title">THRONE WARS</h1>
+        <p style="color: #c0c0c0; margin-bottom: 30px; font-size: 1.2rem;">Action Médiévale en Temps Réel</p>
+        
+        <div class="character-select">
+            <div class="character-option" data-character="knight">
+                <div class="character-icon">⚔️</div>
+                <div class="character-name">Chevalier</div>
+                <div class="character-stats">Vie: 150<br>Force: 8<br>Défense: 9</div>
+            </div>
+            <div class="character-option" data-character="berserker">
+                <div class="character-icon">🪓</div>
+                <div class="character-name">Berserker</div>
+                <div class="character-stats">Vie: 120<br>Force: 10<br>Défense: 6</div>
+            </div>
+            <div class="character-option" data-character="archer">
+                <div class="character-icon">🏹</div>
+                <div class="character-name">Archer</div>
+                <div class="character-stats">Vie: 100<br>Force: 7<br>Précision: 9</div>
+            </div>
+        </div>
+        
+        <button class="menu-button" id="startGameBtn">COMMENCER LA BATAILLE</button>
+        <button class="menu-button" id="settingsBtn">PARAMÈTRES</button>
+        <button class="menu-button" id="creditsBtn">CRÉDITS</button>
+    </div>
+    
+    <!-- Canvas du jeu -->
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- Overlay UI -->
+    <div id="uiOverlay">
+        <!-- Barre de vie -->
+        <div class="health-bar">
+            <div class="health-fill" id="healthFill"></div>
+            <div class="health-text" id="healthText">100/100</div>
+        </div>
+        
+        <!-- Barre d'endurance -->
+        <div class="stamina-bar">
+            <div class="stamina-fill" id="staminaFill"></div>
+        </div>
+        
+        <!-- Munitions -->
+        <div class="ammo-display">
+            <div class="weapon-icon" id="weaponIcon">⚔️</div>
+            <div id="ammoText">∞</div>
+        </div>
+        
+        <!-- Contrôles mobiles -->
+        <div class="mobile-controls">
+            <div class="joystick-container" id="joystickContainer">
+                <div class="joystick-base"></div>
+                <div class="joystick-thumb" id="joystickThumb"></div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-btn" id="dodgeBtn">↷</button>
+                <button class="action-btn" id="blockBtn">🛡️</button>
+                <button class="action-btn" id="attackBtn">⚔️</button>
+                <button class="action-btn" id="reloadBtn">↻</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Effets visuels -->
+    <div class="blood-splatter" id="bloodSplatter"></div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
